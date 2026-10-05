@@ -1,0 +1,1055 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>상주 뭐 먹지?</title>
+<style>
+:root{--bg:#f6f7fb;--card:#fff;--ink:#15171a;--muted:#727780;--line:#e7e9ee;--accent:#111827}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif}
+.wrap{max-width:760px;margin:auto;padding:28px 16px 50px}
+h1{font-size:34px;margin:10px 0 6px} .sub{color:var(--muted);margin-bottom:24px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:20px;margin:14px 0;box-shadow:0 8px 25px rgba(0,0,0,.04)}
+h2{font-size:17px;margin:0 0 14px}
+.options{display:flex;flex-wrap:wrap;gap:9px}
+label.opt{border:1px solid var(--line);padding:10px 13px;border-radius:999px;cursor:pointer;background:#fff}
+label.opt:has(input:checked){background:#111827;color:#fff;border-color:#111827}
+.opt input{display:none}
+button{border:0;border-radius:15px;padding:14px 17px;font-weight:800;font-size:16px;cursor:pointer}
+.primary{width:100%;background:#111827;color:#fff;margin-top:10px}
+.secondary{background:#eef0f4;color:#111827}
+.restaurant{font-size:27px;font-weight:900;margin:8px 0}
+.meta{color:var(--muted);line-height:1.6}
+.actions{display:flex;gap:9px;margin-top:16px;flex-wrap:wrap}
+.actions a{flex:1;text-align:center;text-decoration:none;background:#eef0f4;color:#111827;padding:13px;border-radius:14px;font-weight:800}
+.hidden{display:none}
+.vs{display:grid;grid-template-columns:1fr 54px 1fr;align-items:stretch;gap:10px}
+.choice{border:1px solid var(--line);border-radius:18px;padding:18px;background:#fff;cursor:pointer;text-align:left}
+.choice:hover{border-color:#111827}
+.choice b{font-size:21px;display:block;margin-bottom:8px}
+.vsmark{display:flex;align-items:center;justify-content:center;font-weight:900}
+.note{font-size:13px;color:var(--muted);margin-top:14px}
+.badge{display:inline-block;font-size:12px;padding:5px 8px;background:#eef0f4;border-radius:999px;margin-right:5px}
+@media(max-width:560px){.vs{grid-template-columns:1fr}.vsmark{height:28px}.choice{min-height:145px}}
+
+.comments{margin-top:22px;padding-top:18px;border-top:1px solid var(--line)}
+.comments h3{margin:0 0 6px;font-size:19px}
+.rating-summary{font-weight:800;margin:8px 0 12px}.rating-picker{display:flex;gap:4px;margin:10px 0}.star{border:0;background:transparent;padding:2px;font-size:28px;cursor:pointer;color:#cbd5e1}.star.active{color:#f59e0b}.comment-rating{color:#f59e0b;font-weight:800;margin-bottom:5px}.comment-form{display:grid;grid-template-columns:120px 1fr auto;gap:8px;margin:14px 0}
+.comment-form input{border:1px solid var(--line);border-radius:12px;padding:12px;font-size:15px;min-width:0}
+.comment-form button{background:#111827;color:white;padding:12px 15px}
+.comment-list{display:flex;flex-direction:column;gap:9px}
+.comment-item{background:#f6f7fb;border-radius:14px;padding:12px 14px}
+.comment-head{display:flex;justify-content:space-between;gap:10px;margin-bottom:5px}
+.comment-name{font-weight:800}.comment-time{font-size:12px;color:var(--muted)}
+.comment-text{white-space:pre-wrap;word-break:break-word;line-height:1.5}
+.comment-empty{color:var(--muted);padding:10px 0}
+@media(max-width:560px){.comment-form{grid-template-columns:1fr}.comment-form button{width:100%}}
+
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🍚 상주 뭐 먹지?</h1>
+  <div class="sub">조건만 고르면 오늘 갈 곳을 대신 골라드립니다. <span id="restaurantCount"></span></div>
+
+  <div id="setup">
+    <div class="card">
+      <h2>1. 음식 종류</h2>
+      <div class="options" id="categories"></div>
+    </div>
+
+    <div class="card">
+      <h2>2. 고르는 방법</h2>
+      <div class="options">
+        <label class="opt"><input type="radio" name="mode" value="random" checked>🎲 랜덤 한 곳</label>
+        <label class="opt"><input type="radio" name="mode" value="worldcup">⚔️ 이상형 월드컵</label>
+      </div>
+    </div>
+    <button class="primary" onclick="start()">오늘의 식당 고르기</button>
+  </div>
+
+  <div id="result" class="card hidden"></div>
+  <div id="cup" class="card hidden"></div>
+</div>
+
+<script>
+const restaurants = [
+  {
+    "name": "용궁단골식당 신봉점",
+    "cat": "한식",
+    "price": "under",
+    "menu": "오징어불고기 · 국밥 · 닭발구이",
+    "addr": "경북 상주시 신봉동 483-1"
+  },
+  {
+    "name": "다담뜰한식뷔페 상주",
+    "cat": "한식",
+    "price": "under",
+    "menu": "한식 뷔페",
+    "addr": "경북 상주시 만산3길 6"
+  },
+  {
+    "name": "지천식당",
+    "cat": "한식",
+    "price": "under",
+    "menu": "돼지 양념석쇠구이 · 칼국수",
+    "addr": "경북 상주시 양촌동 569-7"
+  },
+  {
+    "name": "상주주막",
+    "cat": "한식",
+    "price": "under",
+    "menu": "해물파전 · 상도비빔밥 · 잔치국수",
+    "addr": "경북 상주시 중동면 갱다불길 147",
+    "source": "https://www.koreatriptips.com/dining/2900738.html",
+    "note": "",
+    "region": "상주"
+  },
+  {
+    "name": "혜원식당",
+    "cat": "한식",
+    "price": "under",
+    "menu": "콩국수 · 한방통삼겹수육 · 해물칼국수",
+    "addr": "경북 상주시 금도랑길 21",
+    "source": "https://www.diningcode.com/profile.php?rid=rznHNXjUaHet",
+    "note": "",
+    "region": "상주"
+  },
+  {
+    "name": "산버섯식당",
+    "cat": "한식",
+    "price": "over",
+    "menu": "버섯요리 · 한식",
+    "addr": "경북 상주시 인봉동 45"
+  },
+  {
+    "name": "영의정",
+    "cat": "한식",
+    "price": "over",
+    "menu": "한식",
+    "addr": "경북 상주시 만산동 694-6"
+  },
+  {
+    "name": "한돈참숯꼬기 상주점",
+    "cat": "고기",
+    "price": "over",
+    "menu": "돼지고기 참숯구이",
+    "addr": "경북 상주시 경상대로 3035"
+  },
+  {
+    "name": "여고앞삼겹살",
+    "cat": "고기",
+    "price": "over",
+    "menu": "삼겹살",
+    "addr": "경북 상주시 삼백로 322"
+  },
+  {
+    "name": "연막창 상주점",
+    "cat": "고기",
+    "price": "over",
+    "menu": "막창 · 숯불구이",
+    "addr": "경북 상주시 삼백로 95"
+  },
+  {
+    "name": "육낙원",
+    "cat": "고기",
+    "price": "over",
+    "menu": "고기요리",
+    "addr": "경북 상주시 무양동 276-8"
+  },
+  {
+    "name": "명실상감한우프라자",
+    "cat": "고기",
+    "price": "over",
+    "menu": "한우구이 · 한우탕 · 육회",
+    "addr": "경북 상주시 영남제일로 1119-9"
+  },
+  {
+    "name": "조이통통생구이",
+    "cat": "고기",
+    "price": "over",
+    "menu": "항아리통삼겹 · 숙성제주흑돼지 · 돼지갈비",
+    "addr": "경북 상주시 문무1길 40-5",
+    "source": "https://www.diningcode.com/profile.php?rid=mAVh8XdMONSt",
+    "note": "",
+    "region": "상주"
+  },
+  {
+    "name": "루안",
+    "cat": "중식",
+    "price": "under",
+    "menu": "중식 · 크림짬뽕",
+    "addr": "경북 상주시 중앙로 177-7"
+  },
+  {
+    "name": "청자",
+    "cat": "중식",
+    "price": "under",
+    "menu": "짬뽕 · 짜장면 · 탕수육",
+    "addr": "경북 상주시 외서면 북상주로 539-5"
+  },
+  {
+    "name": "공아춘수타손짜장",
+    "cat": "중식",
+    "price": "under",
+    "menu": "수타짜장 · 짬뽕",
+    "addr": "경북 상주시 경상대로 3197"
+  },
+  {
+    "name": "성수식당",
+    "cat": "중식",
+    "price": "under",
+    "menu": "짬뽕 · 탕수육 · 짜장면",
+    "addr": "경북 상주시 화서면 화령남6길 17",
+    "source": "https://www.diningcode.com/profile.php?rid=eMdhoVDB20Ce",
+    "note": "",
+    "region": "상주"
+  },
+  {
+    "name": "만당 인봉점",
+    "cat": "중식",
+    "price": "under",
+    "menu": "돌짜장 · 돌짬뽕 · 탕수육",
+    "addr": "경북 상주시 삼백로 182",
+    "source": "https://kaienpolice.tistory.com/entry/공공데이터-경상북도-상주시-일반음식점",
+    "note": "",
+    "region": "상주"
+  },
+  {
+    "name": "외남반점",
+    "cat": "중식",
+    "price": "under",
+    "menu": "우거지짬뽕 · 짜장면 · 탕수육",
+    "addr": "경북 상주시 외남면 석단로 926-1",
+    "source": "https://www.diningcode.com/profile.php?rid=nonyviT1vdmO",
+    "note": "",
+    "region": "상주"
+  },
+  {
+    "name": "오이시",
+    "cat": "일식",
+    "price": "over",
+    "menu": "초밥 · 스시",
+    "addr": "경북 상주시 무양동 278-7"
+  },
+  {
+    "name": "해선당",
+    "cat": "일식",
+    "price": "over",
+    "menu": "일식 · 회",
+    "addr": "경북 상주시 무양동 11-159"
+  },
+  {
+    "name": "꼼바",
+    "cat": "양식",
+    "price": "over",
+    "menu": "파스타 · 이탈리아 요리",
+    "addr": "경북 상주시 무양동 287-9"
+  },
+  {
+    "name": "쿠치나13Y",
+    "cat": "양식",
+    "price": "over",
+    "menu": "크림파스타 · 토마토파스타 · 로제파스타",
+    "addr": "경북 상주시 함창읍 새잼이길 21-7",
+    "source": "https://www.ktourmap.com/spotDetails.jsp?contentId=2876513",
+    "note": "",
+    "region": "상주"
+  },
+  {
+    "name": "고려분식",
+    "cat": "분식",
+    "price": "under",
+    "menu": "쫄면 · 군만두 · 돈가스 · 김밥",
+    "addr": "경북 상주시 중앙시장길 29"
+  },
+  {
+    "name": "사벌마당",
+    "cat": "한식",
+    "price": "",
+    "menu": "고추장주물럭 · 삼겹살 · 숯불양념구이",
+    "addr": "경북 상주시 사벌국면 덕담1길 61",
+    "region": "상주",
+    "note": "",
+    "source": "https://www.diningcode.com/profile.php?rid=dckTawAOCgcA"
+  },
+  {
+    "name": "사벌짬뽕",
+    "cat": "중식",
+    "price": "",
+    "menu": "짬뽕 · 쟁반짜장 · 탕수육",
+    "addr": "경북 상주시 사벌국면 덕담1길 15",
+    "region": "상주",
+    "note": "",
+    "source": "https://www.diningcode.com/profile.php?rid=wKQkTRk2zELL"
+  },
+  {
+    "name": "삼거리국밥",
+    "cat": "한식",
+    "price": "",
+    "menu": "돼지국밥 · 순대국밥",
+    "addr": "경북 상주시 남적로 7-2",
+    "region": "상주",
+    "note": "",
+    "source": "https://www.diningcode.com/profile.php?rid=OJ0iUu3NI7Gd"
+  },
+  {
+    "name": "부흥식육식당",
+    "cat": "고기",
+    "price": "",
+    "menu": "돼지석쇠구이 · 소금구이",
+    "addr": "경북 상주시 남적로 6-75",
+    "region": "상주",
+    "note": "",
+    "source": "https://keriai.com/1258"
+  },
+  {
+    "name": "송화쌈밥",
+    "cat": "한식",
+    "price": "",
+    "menu": "쌈밥",
+    "addr": "경북 상주시 상산로 256-14",
+    "region": "상주",
+    "note": "",
+    "source": "https://citybeat.kr/경북-상주시-한식-업체-정보-추천-top-5/"
+  },
+  {
+    "name": "국민냉면",
+    "cat": "한식",
+    "price": "",
+    "menu": "물냉면 · 해물칼국수",
+    "addr": "경북 상주시 북천로 17-7",
+    "region": "상주",
+    "note": "",
+    "source": "https://polle.com/place/4dP65u/국민냉면"
+  },
+  {
+    "name": "샤브마니아",
+    "cat": "한식",
+    "price": "",
+    "menu": "소고기샤브샤브 · 월남쌈",
+    "addr": "경북 상주시 경상대로 3180 1층",
+    "region": "상주",
+    "note": "",
+    "source": "https://www.diningcode.com/profile.php?rid=CfwBLi7m6S3T"
+  },
+  {
+    "name": "양평전소담칼국수",
+    "cat": "한식",
+    "price": "",
+    "menu": "멸치칼국수 · 닭칼국수",
+    "addr": "경북 상주시 중앙로 313",
+    "region": "상주",
+    "note": "검색 상호: 양평진소담칼국수 (사진 상호 재확인 필요)",
+    "source": "https://www.diningcode.com/profile.php?rid=uz7Ir2fWWweb",
+    "mapName": "양평진소담칼국수"
+  },
+  {
+    "name": "능인핫불향쭈꾸미보쌈마루 상주점",
+    "cat": "한식",
+    "price": "",
+    "menu": "쭈꾸미볶음 · 들깨칼국수 · 보쌈",
+    "addr": "경북 상주시 신서문1길 148",
+    "region": "상주",
+    "note": "",
+    "source": "https://www.diningcode.com/profile.php?rid=X3QhzKfrbYsL"
+  },
+  {
+    "name": "칸도라멘",
+    "cat": "일식",
+    "price": "",
+    "menu": "돈코츠라멘 · 매운라멘 · 연어초밥",
+    "addr": "경북 상주시 서성로 2 1층",
+    "region": "상주",
+    "note": "",
+    "source": "https://www.diningcode.com/profile.php?rid=8DbjNqgWDzzM"
+  },
+  {
+    "name": "이재백 동해물회국수",
+    "cat": "한식",
+    "price": "",
+    "menu": "멸치국수 · 멸치칼국수",
+    "addr": "경북 상주시 경상대로 3265",
+    "region": "상주",
+    "note": "검색 상호: 이재백 통영멸치국수 (사진 상호 재확인 필요)",
+    "source": "https://www.diningcode.com/list.dc?query=상주+이재백+통영멸치국수",
+    "mapName": "이재백 통영멸치국수"
+  },
+  {
+    "name": "외갓집",
+    "cat": "한식",
+    "price": "",
+    "menu": "한식 뷔페 · 매일 바뀌는 반찬과 국",
+    "addr": "경북 상주시 서성2길 45",
+    "region": "상주",
+    "note": "",
+    "source": "https://www.diningcode.com/profile.php?rid=0qdUTqAlswHd"
+  },
+  {
+    "name": "서천통닭",
+    "cat": "한식",
+    "price": "",
+    "menu": "통닭 · 치킨",
+    "addr": "경북 상주시 남적로 6-7",
+    "region": "상주",
+    "note": "검색 상호: 세천통닭 (사진 상호 재확인 필요)",
+    "source": "https://www.diningcode.com/profile.php?rid=nhjlU6G02y4r",
+    "mapName": "세천통닭"
+  },
+  {
+    "name": "봉티나",
+    "cat": "분식",
+    "price": "",
+    "menu": "떡볶이 · 어묵튀김 · 만두튀김 · 순대",
+    "addr": "경북 상주시 서성동 108-2",
+    "region": "상주",
+    "note": "검색 상호: 불티나분식 (사진 상호 재확인 필요)",
+    "source": "https://kosimpler.tistory.com/162",
+    "mapName": "불티나분식"
+  },
+  {
+    "name": "새대구식당",
+    "cat": "한식",
+    "price": "",
+    "menu": "한식",
+    "addr": "경북 상주시 사벌국면 덕담1길 35",
+    "region": "상주",
+    "note": "메뉴는 기존 사진 메모 기준 · 온라인 메뉴 재확인 필요",
+    "source": "https://www.koobig.com/49482"
+  },
+  {
+    "name": "대성식당",
+    "cat": "한식",
+    "price": "",
+    "menu": "아구찜 · 콩국수 · 한우국밥",
+    "addr": "경북 상주시 화동면 이소1길 53",
+    "region": "상주",
+    "note": "",
+    "source": "https://www.diningcode.com/profile.php?rid=DcLhlNVbOPzc"
+  },
+  {
+    "name": "양지식당",
+    "cat": "한식",
+    "price": "",
+    "menu": "김치찌개 · 동태찌개 · 청국장 · 주물럭",
+    "addr": "경북 상주시 영남제일로 1295",
+    "region": "상주",
+    "note": "",
+    "source": "https://www.diningcode.com/profile.php?rid=tkPjNXacWzA4"
+  },
+  {
+    "name": "짬뽕국수집",
+    "cat": "분식",
+    "price": "",
+    "menu": "짬뽕국수 · 삼겹살김밥",
+    "addr": "경북 상주시 왕산로 280",
+    "region": "상주",
+    "note": "",
+    "source": "https://www.diningcode.com/profile.php?rid=kFobhbnujhWt"
+  },
+  {
+    "name": "금문왕손짜장",
+    "cat": "중식",
+    "price": "",
+    "menu": "짜장면 · 짬뽕 · 탕수육 · 중화비빔밥",
+    "addr": "경북 상주시 계산8길 3",
+    "region": "상주",
+    "note": "",
+    "source": "https://www.diningcode.com/profile.php?rid=BCBlOTsNElmD"
+  },
+  {
+    "name": "소우리",
+    "cat": "고기",
+    "price": "",
+    "menu": "소갈비찜 · 갈비탕",
+    "addr": "경북 상주시 경상대로 2950",
+    "region": "상주",
+    "note": "",
+    "source": "https://www.diningcode.com/profile.php?rid=fS1rUjQBIWF1"
+  },
+  {
+    "name": "사벌 영원식당",
+    "cat": "한식",
+    "price": "",
+    "menu": "뽕잎칼국수 · 콩국수",
+    "addr": "경북 상주시 사벌국면 덕담1길 82-10",
+    "region": "상주",
+    "note": "",
+    "source": "https://www.diningcode.com/profile.php?rid=L1DutlY8YU1F"
+  },
+  {
+    "name": "승리식당",
+    "cat": "한식",
+    "price": "",
+    "menu": "한우소머리국밥 · 석쇠구이",
+    "addr": "경북 상주시 성하1길 60",
+    "region": "상주",
+    "note": "검색 상호: 솜리식당 (사진 상호 재확인 필요)",
+    "source": "https://www.diningcode.com/profile.php?rid=JuAGLhZHQH3J",
+    "mapName": "솜리식당"
+  },
+  {
+    "name": "준호네식당",
+    "cat": "한식",
+    "price": "",
+    "menu": "김치찌개 · 두부찌개 · 제육볶음",
+    "addr": "경북 상주시 무양동 273-6",
+    "region": "상주",
+    "note": "",
+    "source": "https://www.diningcode.com/profile.php?rid=oJxQl1By2XLF"
+  },
+  {
+    "name": "종숙이식당",
+    "cat": "한식",
+    "price": "",
+    "menu": "콩나물밥 · 홍합탕",
+    "addr": "경북 상주시 상산로 172",
+    "region": "상주",
+    "note": "",
+    "source": "https://www.diningcode.com/list.dc?query=상주+콩나물밥"
+  },
+  {
+    "name": "굴다리식당",
+    "cat": "한식",
+    "price": "",
+    "menu": "소내장국밥 · 소내장전골",
+    "addr": "경북 상주시 함창읍 구향로 114",
+    "region": "상주",
+    "note": "",
+    "mapName": "굴다리식당",
+    "source": "https://www.diningcode.com/profile.php?rid=fsCvIx4367F8"
+  },
+  {
+    "name": "진미반점",
+    "cat": "중식",
+    "price": "",
+    "menu": "짜장면 · 탕수육 · 쟁반짜장",
+    "addr": "경북 상주시 문무1길 32",
+    "region": "상주",
+    "note": "",
+    "source": "https://www.diningcode.com/list.dc?query=롯데시네마+상주+중국집"
+  },
+  {
+    "name": "멸치네칼국수",
+    "cat": "한식",
+    "price": "",
+    "menu": "손칼국수 · 콩국수 · 만두",
+    "addr": "경북 상주시 왕산로 65",
+    "region": "상주",
+    "note": "",
+    "source": "https://www.diningcode.com/profile.php?rid=jFrhNSmfqLoV"
+  },
+  {
+    "name": "송원식당",
+    "cat": "중식",
+    "price": "",
+    "menu": "짜장면 · 짬뽕",
+    "addr": "경북 상주시 화서면 화령남5길 20",
+    "region": "상주",
+    "note": "",
+    "source": "https://www.diningcode.com/list.dc?query=상주시+화서면+화령남5길"
+  },
+  {
+    "name": "희야식당",
+    "cat": "한식",
+    "price": "",
+    "menu": "진주물냉면 · 땡초섞어냉면 · 육전",
+    "addr": "경북 상주시 상산로 130",
+    "region": "상주",
+    "note": "",
+    "source": "https://www.diningcode.com/profile.php?rid=ZFUdzyyyUpP3"
+  },
+  {
+    "name": "들밥상",
+    "cat": "한식",
+    "price": "",
+    "menu": "돌솥비빔밥 정식 · 청국장 정식 · 순두부버섯전골",
+    "addr": "경북 상주시 왕산로 22 태암2차 프라임로즈 201동",
+    "region": "상주",
+    "note": "",
+    "source": "https://www.diningcode.com/profile.php?rid=OkmsKNzWCE0H"
+  },
+  {
+    "name": "대경식당",
+    "cat": "고기",
+    "price": "",
+    "menu": "삼겹살 · 찌개",
+    "addr": "경북 상주시 동수2길 39",
+    "region": "상주",
+    "note": "",
+    "source": "https://www.diningcode.com/profile.php?rid=sh2S5jsS21WK"
+  },
+  {
+    "name": "주왕산삼계탕",
+    "cat": "한식",
+    "price": "",
+    "menu": "삼계탕 · 전복삼계탕",
+    "addr": "경북 상주시 북상주로 75",
+    "region": "상주",
+    "note": "",
+    "source": "https://www.diningcode.com/profile.php?rid=AiwsKRNLdDZr"
+  },
+  {
+    "name": "당교면옥",
+    "cat": "한식",
+    "price": "",
+    "menu": "진주냉면 · 육전 · 직화쭈꾸미",
+    "addr": "경북 상주시 함창읍 당교로 106",
+    "region": "상주",
+    "note": "",
+    "source": "https://www.diningcode.com/profile.php?rid=zwRaNv8tzHgA"
+  },
+  {
+    "name": "종가네면옥",
+    "cat": "한식",
+    "price": "",
+    "menu": "물냉면 · 비빔냉면 · 코다리비빔냉면",
+    "addr": "경북 상주시 경상대로 3025-4",
+    "region": "상주",
+    "note": "검색 상호: 총각네면옥 (사진 상호 재확인 필요)",
+    "source": "https://www.diningcode.com/profile.php?rid=070hPzcElN6c",
+    "mapName": "총각네면옥"
+  },
+  {
+    "name": "차박사얼큰이",
+    "cat": "한식",
+    "price": "",
+    "menu": "닭발 · 찜닭 · 양념치킨",
+    "addr": "경북 상주시 동수5길 108",
+    "region": "상주",
+    "note": "",
+    "source": "https://www.diningcode.com/list.dc?query=상주시+찜닭"
+  },
+  {
+    "name": "빨간지붕",
+    "cat": "분식",
+    "price": "",
+    "menu": "치즈떡볶이 · 분식",
+    "addr": "경북 상주시 상서문3길 100-25",
+    "region": "상주",
+    "note": "",
+    "source": "https://www.diningcode.com/list.dc?query=상주+치즈떡볶이"
+  },
+  {
+    "name": "춘리마라탕",
+    "cat": "중식",
+    "price": "",
+    "menu": "마라탕 · 마라샹궈",
+    "addr": "경북 상주시 남성3길 5",
+    "region": "상주",
+    "note": "",
+    "source": "https://chunlimalatang.com/"
+  },
+  {
+    "name": "마라부마라탕",
+    "cat": "중식",
+    "price": "",
+    "menu": "마라탕 · 마라샹궈 · 꿔바로우",
+    "addr": "경북 상주시 상산로 289",
+    "region": "상주",
+    "note": "",
+    "source": "https://www.diningcode.com/profile.php?rid=LFUiwSo069v6"
+  },
+  {
+    "name": "삼치기",
+    "cat": "고기",
+    "price": "",
+    "menu": "쫄갈비 · 꽃삼겹살 · 석쇠돼지갈비",
+    "addr": "경북 상주시 동수4길 110",
+    "region": "상주",
+    "note": "",
+    "source": "https://kaienpolice.tistory.com/entry/공공데이터-경상북도-상주시-일반음식점"
+  },
+  {
+    "name": "청담 1985",
+    "cat": "중식",
+    "price": "",
+    "menu": "유산슬 · 짜장면",
+    "addr": "경북 상주시 동수1길 89",
+    "region": "상주",
+    "note": "",
+    "source": "https://www.diningcode.com/profile.php?rid=2yYicezsiaht"
+  },
+  {
+    "name": "돼지영농후계자",
+    "cat": "고기",
+    "price": "",
+    "menu": "꼬들살 · 양념꼬들살 · 돼지껍데기",
+    "addr": "경북 상주시 동수3길 137-17",
+    "region": "상주",
+    "note": "",
+    "source": "https://www.diningcode.com/profile.php?rid=Jtc6nJ7HaR0p"
+  },
+  {
+    "name": "남천식당",
+    "cat": "한식",
+    "price": "",
+    "menu": "우거지해장국",
+    "addr": "경북 상주시 왕산로 186-1",
+    "region": "상주",
+    "note": "",
+    "source": "https://www.diningcode.com/profile.php?rid=oc9XRjExWMuu"
+  },
+  {
+    "name": "오늘의만찬",
+    "cat": "한식",
+    "price": "",
+    "menu": "찌개 · 수육 · 돈가스 (사진 메모)",
+    "addr": "경북 상주시 상산로 256-14",
+    "region": "상주",
+    "note": "메뉴는 기존 사진 메모 기준 · 온라인 메뉴 재확인 필요",
+    "source": "https://www.gyeongju.go.kr/gjlll/main/html.do?menu_idx=257"
+  },
+  {
+    "name": "논두렁밭두렁",
+    "cat": "한식",
+    "price": "",
+    "menu": "순두부찌개 · 해물순두부",
+    "addr": "경북 상주시 신서문2길 20",
+    "region": "상주",
+    "note": "",
+    "source": "https://www.diningcode.com/list.dc?query=상주시+신서문2길"
+  },
+  {
+    "name": "새깔끔이분식",
+    "cat": "분식",
+    "price": "",
+    "menu": "떡볶이 · 라볶이 · 튀김",
+    "addr": "경북 상주시 상서문3길 132",
+    "region": "상주",
+    "note": "",
+    "source": "https://www.koobig.com/12800"
+  },
+  {
+    "name": "만복이쭈꾸미",
+    "cat": "한식",
+    "price": "",
+    "menu": "쭈꾸미볶음 · 낙지볶음 · 쭈꾸미철판",
+    "addr": "경북 문경시 당교3길 37",
+    "region": "문경",
+    "note": "",
+    "mapName": "만복이쭈꾸미낙지볶음 문경점",
+    "source": "https://tdbhouse.tistory.com/161"
+  },
+  {
+    "name": "북천코다리네",
+    "cat": "한식",
+    "price": "",
+    "menu": "코다리조림 · 코다리찜",
+    "addr": "경북 상주시 북천로 13",
+    "region": "상주",
+    "note": "",
+    "source": "https://www.diningcode.com/profile.php?rid=Wi4aw3Xi2K2X"
+  },
+  {
+    "name": "문경맛집순대",
+    "cat": "한식",
+    "price": "",
+    "menu": "순대국밥 · 살코기국밥 · 막창순대",
+    "addr": "경북 문경시 문경읍 주흘1길 15",
+    "region": "문경",
+    "note": "",
+    "source": "https://www.diningcode.com/profile.php?rid=9LBHxpRU57CX"
+  },
+  {
+    "name": "초밥이야기",
+    "cat": "일식",
+    "price": "",
+    "menu": "초밥",
+    "addr": "경북 상주시 삼백로 102-1",
+    "region": "상주",
+    "note": "",
+    "source": "https://big5chinese.visitkorea.or.kr/svc/contents/contentsView.do?vcontsId=58558"
+  },
+  {
+    "name": "중덕돈가",
+    "cat": "고기",
+    "price": "",
+    "menu": "청국장 · 생삼겹 · 주물럭 (사진 메모)",
+    "addr": "경북 상주시 발산로 270",
+    "region": "상주",
+    "note": "메뉴는 기존 사진 메모 기준 · 온라인 메뉴 재확인 필요",
+    "source": "https://place.udanax.org/p/1222727/중덕돈가"
+  },
+  {
+    "name": "당근하우스",
+    "cat": "한식",
+    "price": "",
+    "menu": "식사 · 메뉴 확인 필요",
+    "addr": "경북 상주시 사벌국면 국제승마장로 1",
+    "region": "상주",
+    "note": "메뉴는 기존 사진 메모 기준 · 온라인 메뉴 재확인 필요",
+    "source": "https://bizno.net/article/1804700975"
+  },
+  {
+    "name": "남산가든",
+    "cat": "한식",
+    "price": "",
+    "menu": "고추장석쇠구이 · 간장석쇠구이",
+    "addr": "경북 상주시 신서문1길 137",
+    "region": "상주",
+    "note": "",
+    "source": "https://www.tripinfo.co.kr/info.html?content_id=2831685&content_type_id=39"
+  },
+  {
+    "name": "점촌돈가스",
+    "cat": "양식",
+    "price": "",
+    "menu": "돈가스",
+    "addr": "경북 문경시 중앙6길 14 (점촌동)",
+    "region": "문경",
+    "note": "검색 자료에 중앙6길 14와 다른 지번이 함께 있어 현 주소 재확인 필요",
+    "source": "https://irc.purpleo.kr/article/6507"
+  },
+  {
+    "name": "선비꼬마김밥",
+    "cat": "분식",
+    "price": "",
+    "menu": "꼬마김밥",
+    "addr": "경북 문경시 · 상세 주소 미확인",
+    "region": "문경",
+    "note": "검색 후 동일 식당의 상세 주소 확인 필요 · 메뉴는 사진 메모 기준"
+  },
+  {
+    "name": "라라코스트",
+    "cat": "양식",
+    "price": "",
+    "menu": "치킨토마토파스타 · 치킨필라프 · 피자",
+    "addr": "경북 상주시 상서문2길 123",
+    "region": "상주",
+    "source": "https://www.diningcode.com/profile.php?rid=mH2pFZgf7ByY"
+  },
+  {
+    "name": "예천참우마을본가",
+    "cat": "고기",
+    "price": "",
+    "menu": "한우구이 · 한우탕 · 육회",
+    "addr": "경북 예천군 풍양면 풍지로 23",
+    "region": "예천",
+    "source": "https://www.diningcode.com/profile.php?rid=6DEfJU6Oo9ZS"
+  },
+  {
+    "name": "홍찜닭 상주점",
+    "cat": "한식",
+    "price": "",
+    "menu": "안동찜닭",
+    "addr": "경북 상주시 중앙로 268 1층",
+    "region": "상주",
+    "source": "https://www.diningcode.com/profile.php?rid=ARNKiVfdoPCN"
+  },
+  {
+    "name": "선산김치곱창",
+    "cat": "한식",
+    "price": "",
+    "menu": "김치곱창전골 · 볶음밥",
+    "addr": "경북 상주시 성동로 16",
+    "region": "상주",
+    "source": "https://www.diningcode.com/profile.php?rid=GvSXnjBzjvdC"
+  },
+  {
+    "name": "고집센그집갈비탕 경북상주점",
+    "cat": "한식",
+    "price": "",
+    "menu": "왕갈비탕 · 전통갈비찜 · 매운갈비찜",
+    "addr": "경북 상주시 경상대로 3026 1층",
+    "region": "상주",
+    "source": "https://www.diningcode.com/profile.php?rid=Fbby1wmTZmdN"
+  },
+  {
+    "name": "와우궁양평해장국 세천점",
+    "cat": "한식",
+    "price": "",
+    "menu": "와우해장국 · 양평해장국 · 선지해장국",
+    "addr": "경북 상주시 북상주로 433",
+    "region": "상주",
+    "source": "https://www.diningcode.com/profile.php?rid=eOoOpNExHpZz"
+  }
+];
+
+const cats=["전체","한식","고기","중식","일식","양식","분식"];
+document.getElementById("categories").innerHTML=cats.map((c,i)=>
+ `<label class="opt"><input type="radio" name="cat" value="${c}" ${i===0?"checked":""}>${c}</label>`).join("");
+
+document.getElementById("restaurantCount").textContent=`총 ${restaurants.length}곳`;
+let pool=[], champion=null, challenger=null;
+window.selectedRating=0;
+window.setRating=function(n){
+ window.selectedRating=n;
+ document.querySelectorAll(".star").forEach(star=>star.classList.toggle("active",Number(star.dataset.rating)<=n));
+ const guide=document.getElementById("ratingGuide"); if(guide) guide.textContent=`${n}점 선택됨`;
+};
+
+function selected(name){return document.querySelector(`input[name="${name}"]:checked`).value}
+function filtered(){
+ const cat=selected("cat");
+ return restaurants.filter(r=>cat==="전체"||r.cat===cat);
+}
+function shuffle(a){return [...a].sort(()=>Math.random()-.5)}
+function mapUrl(r){return "https://map.naver.com/p/search/"+encodeURIComponent((r.mapName||r.name)+" "+(r.region||"상주"))}
+function restaurantHtml(r,title="오늘은 여기!"){
+ return `<div class="badge">${r.cat}</div>
+ <div class="meta" style="margin-top:12px">${title}</div>
+ <div class="restaurant">${r.name}</div>
+ <div class="meta">🍽️ ${r.menu}<br>📍 ${r.addr}${r.region&&r.region!=="상주"?" · "+r.region+" 식당":""}${r.note?`<br>ℹ️ ${r.note}`:""}</div>
+ <div class="actions"><a target="_blank" href="${mapUrl(r)}">🗺️ 네이버지도에서 보기</a></div>
+ <div class="comments">
+   <h3>💬 ${r.name} 이야기</h3>
+   <div id="ratingSummary" class="rating-summary">⭐ 아직 별점이 없어요</div>
+   <div class="meta">이 식당에 대한 후기나 팁을 남겨보세요.</div>
+   <div class="rating-picker" aria-label="별점 선택">
+     ${[1,2,3,4,5].map(n=>`<button type="button" class="star" data-rating="${n}" onclick="setRating(${n})" aria-label="${n}점">★</button>`).join("")}
+   </div>
+   <div class="meta" id="ratingGuide">별점을 선택해주세요.</div>
+   <div class="comment-form">
+     <input id="nickname" maxlength="20" placeholder="닉네임">
+     <input id="commentText" maxlength="500" placeholder="댓글을 입력하세요">
+     <button onclick='addComment(${JSON.stringify(r.name)})'>등록</button>
+   </div>
+   <div id="commentList" class="comment-list"><div class="comment-empty">댓글을 불러오는 중...</div></div>
+ </div>
+ <button class="primary" onclick="resetApp()">다시 고르기</button>`;
+}
+function start(){
+ pool=shuffle(filtered());
+ if(!pool.length){alert("이 조건에 등록된 식당이 아직 없어요. 다른 조건을 골라주세요.");return}
+ document.getElementById("setup").classList.add("hidden");
+ if(selected("mode")==="random"){
+   const r=pool[Math.floor(Math.random()*pool.length)];
+   const el=document.getElementById("result"); el.innerHTML=restaurantHtml(r); el.classList.remove("hidden");
+   setTimeout(()=>window.loadComments && window.loadComments(r.name),0);
+ } else {
+   if(pool.length<2){alert("두 곳을 뽑으려면 후보가 2곳 이상 필요해요.");resetApp();return}
+   drawPair();
+ }
+}
+function choiceCard(r,side){
+ return `<button class="choice" onclick="pick('${side}')" style="text-align:left">
+   <div style="font-size:25px;font-weight:900;line-height:1.3;color:#15171a;margin-bottom:12px">
+     ${r.name}
+   </div>
+   <div style="margin-bottom:10px">
+     <span class="badge">${r.cat}</span>
+   </div>
+   <div class="meta" style="font-size:16px;line-height:1.65">
+     🍽️ ${r.menu}
+   </div>
+ </button>`;
+}
+function drawPair(){
+ const candidates=shuffle(filtered());
+ if(candidates.length<2){alert("현재 조건에서는 두 곳 이상이 필요해요.");resetApp();return}
+ champion=candidates[0]; challenger=candidates[1];
+ renderCup();
+}
+function renderCup(){
+ const el=document.getElementById("cup"); el.classList.remove("hidden");
+ el.innerHTML=`<h2>⚔️ 이상형 월드컵</h2>
+ <div class="meta">랜덤으로 뽑힌 두 식당 중 마음에 드는 곳을 선택하세요.</div><br>
+ <div class="vs">${choiceCard(champion,"champ")}<div class="vsmark">VS</div>${choiceCard(challenger,"chall")}</div>
+ <button class="primary" style="margin-top:16px" onclick="drawPair()">🔄 다른 두 곳 뽑기</button>
+ <button class="secondary" style="margin-top:10px" onclick="resetApp()">조건 다시 고르기</button>`;
+}
+function pick(side){
+ const winner = side==="champ" ? champion : challenger;
+ const el=document.getElementById("cup");
+ el.innerHTML=restaurantHtml(winner,"✅ 오늘은 여기로 결정!");
+ setTimeout(()=>window.loadComments && window.loadComments(winner.name),0);
+}
+function resetApp(){
+ document.getElementById("result").classList.add("hidden");
+ document.getElementById("cup").classList.add("hidden");
+ document.getElementById("setup").classList.remove("hidden");
+ window.scrollTo({top:0,behavior:"smooth"});
+}
+</script>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
+import {
+  getFirestore, collection, addDoc,
+  getDocs, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDcHEvn1omJxyy8mHn4QsCn_b05s4Edgi4",
+  authDomain: "no-decisions-no-stress.firebaseapp.com",
+  projectId: "no-decisions-no-stress",
+  storageBucket: "no-decisions-no-stress.firebasestorage.app",
+  messagingSenderId: "560240925090",
+  appId: "1:560240925090:web:dbedda0172c3d76608bafb"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+function esc(s){
+  return String(s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function formatTime(ts){
+  if(!ts || !ts.toDate) return "방금";
+  return ts.toDate().toLocaleString("ko-KR",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"});
+}
+
+window.loadComments = async function(restaurant){
+  const list=document.getElementById("commentList");
+  if(!list) return;
+  list.innerHTML='<div class="comment-empty">댓글을 불러오는 중...</div>';
+  try{
+    const snap=await getDocs(collection(db,"comments"));
+    const docs = snap.docs.filter(d=>d.data().restaurant===restaurant).sort((a,b)=>{
+      const at=a.data().createdAt?.toMillis?.() || 0;
+      const bt=b.data().createdAt?.toMillis?.() || 0;
+      return bt-at;
+    });
+    const rated=docs.map(d=>Number(d.data().rating)).filter(r=>Number.isInteger(r)&&r>=1&&r<=5);
+    const summary=document.getElementById("ratingSummary");
+    if(summary){
+      if(rated.length){ const avg=rated.reduce((a,b)=>a+b,0)/rated.length; summary.textContent=`⭐ ${avg.toFixed(1)} / 5 (${rated.length}명)`; }
+      else summary.textContent="⭐ 아직 별점이 없어요";
+    }
+    if(docs.length===0){list.innerHTML='<div class="comment-empty">아직 댓글이 없어요. 첫 댓글을 남겨보세요!</div>';return}
+    list.innerHTML=docs.map(d=>{
+      const x=d.data();
+      return `<div class="comment-item">
+        <div class="comment-head"><span class="comment-name">${esc(x.nickname)}</span><span class="comment-time">${formatTime(x.createdAt)}</span></div>
+        ${Number.isInteger(x.rating)?`<div class="comment-rating">${"★".repeat(x.rating)}${"☆".repeat(5-x.rating)} · ${x.rating}점</div>`:""}
+        <div class="comment-text">${esc(x.text)}</div>
+      </div>`;
+    }).join("");
+  }catch(e){
+    console.error(e);
+    list.innerHTML='<div class="comment-empty">댓글을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.</div>';
+  }
+};
+
+window.addComment = async function(restaurant){
+  const nick=document.getElementById("nickname");
+  const text=document.getElementById("commentText");
+  const nickname=nick.value.trim(), body=text.value.trim();
+  const rating=Number(window.selectedRating||0);
+  if(!nickname){alert("닉네임을 입력해주세요.");nick.focus();return}
+  if(!rating){alert("별점을 선택해주세요.");return}
+  if(!body){alert("댓글을 입력해주세요.");text.focus();return}
+  try{
+    await addDoc(collection(db,"comments"),{
+      restaurant,
+      nickname:nickname.slice(0,20),
+      text:body.slice(0,500),
+      rating,
+      createdAt:serverTimestamp()
+    });
+    text.value="";
+    window.selectedRating=0;
+    document.querySelectorAll(".star").forEach(star=>star.classList.remove("active"));
+    const guide=document.getElementById("ratingGuide"); if(guide) guide.textContent="별점을 선택해주세요.";
+    await window.loadComments(restaurant);
+  }catch(e){
+    console.error(e);
+    alert("댓글 등록에 실패했습니다. Firebase 설정을 확인해주세요.");
+  }
+};
+</script>
+
+</body>
+</html>
